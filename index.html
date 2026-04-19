@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ocean Drones That Eat Plastic</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600;800;900&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --bg-deep: #040d1a;
+    --bg-ocean: #071a2e;
+    --bg-mid: #0c2744;
+    --fg: #e8f4f8;
+    --fg-muted: #7fb8cc;
+    --accent: #00e5c7;
+    --accent-glow: rgba(0,229,199,0.25);
+    --coral: #ff6b5a;
+    --coral-glow: rgba(255,107,90,0.2);
+    --gold: #ffc857;
+    --card: rgba(12,39,68,0.7);
+    --border: rgba(0,229,199,0.15);
+    --slide-w: 100vw;
+    --slide-h: 100vh;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg-deep);
+    color: var(--fg);
+    overflow: hidden;
+    width: var(--slide-w);
+    height: var(--slide-h);
+    user-select: none;
+  }
+
+  /* Background ocean particles canvas */
+  #ocean-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Presentation container */
+  .presentation {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+  }
+
+  .slide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 80px;
+    opacity: 0;
+    transform: translateX(80px) scale(0.96);
+    transition: opacity 0.7s cubic-bezier(0.4,0,0.2,1), transform 0.7s cubic-bezier(0.4,0,0.2,1);
+    pointer-events: none;
+    will-change: transform, opacity;
+  }
+
+  .slide.active {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .slide.exit-left {
+    opacity: 0;
+    transform: translateX(-80px) scale(0.96);
+  }
+
+  /* Slide number */
+  .slide-number {
+    position: absolute;
+    top: 28px;
+    right: 40px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 200;
+    font-size: 14px;
+    color: var(--fg-muted);
+    letter-spacing: 2px;
+  }
+
+  /* Progress bar */
+  .progress-bar {
+    position: fixed;
+    bottom: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--coral));
+    z-index: 100;
+    transition: width 0.5s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 12px var(--accent-glow);
+  }
+
+  /* Navigation */
+  .nav-controls {
+    position: fixed;
+    bottom: 24px;
+    right: 40px;
+    display: flex;
+    gap: 10px;
+    z-index: 100;
+  }
+
+  .nav-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: rgba(4,13,26,0.7);
+    backdrop-filter: blur(10px);
+    color: var(--fg-muted);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .nav-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    transform: scale(1.1);
+  }
+
+  .nav-btn:active { transform: scale(0.95); }
+
+  .slide-dots {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 100;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(127,184,204,0.25);
+    transition: all 0.4s;
+    cursor: pointer;
+  }
+
+  .dot.active {
+    background: var(--accent);
+    width: 28px;
+    border-radius: 4px;
+    box-shadow: 0 0 10px var(--accent-glow);
+  }
+
+  /* Typography */
+  .slide h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: clamp(42px, 6vw, 80px);
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+
+  .slide h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: clamp(32px, 4.5vw, 60px);
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+
+  .slide h3 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: clamp(22px, 2.5vw, 32px);
+    margin-bottom: 12px;
+  }
+
+  .slide p {
+    font-size: clamp(16px, 1.6vw, 22px);
+    line-height: 1.6;
+    color: var(--fg-muted);
+    max-width: 680px;
+  }
+
+  .highlight { color: var(--accent); }
+  .coral { color: var(--coral); }
+  .gold { color: var(--gold); }
+
+  /* Subtitle styling */
+  .subtitle {
+    font-size: clamp(18px, 2vw, 26px);
+    font-weight: 300;
+    color: var(--fg-muted);
+    margin-bottom: 40px;
+  }
+
+  /* Tag pill */
+  .tag {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .tag-teal {
+    background: rgba(0,229,199,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,199,0.25);
+  }
+
+  .tag-coral {
+    background: var(--coral-glow);
+    color: var(--coral);
+    border: 1px solid rgba(255,107,90,0.25);
+  }
+
+  /* Cards grid */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    max-width: 900px;
+    width: 100%;
+    margin-top: 30px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    backdrop-filter: blur(12px);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  .card:hover {
+    border-color: rgba(0,229,199,0.35);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .card h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--fg);
+  }
+
+  .card p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--fg-muted);
+  }
+
+  /* Stat blocks */
+  .stats-row {
+    display: flex;
+    gap: 40px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-block {
+    text-align: center;
+    padding: 20px 30px;
+    border-radius: 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+    min-width: 160px;
+  }
+
+  .stat-number {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 900;
+    font-size: 48px;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* Process steps */
+  .process-steps {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+    max-width: 950px;
+    width: 100%;
+    margin-top: 36px;
+    position: relative;
+  }
+
+  .process-line {
+    position: absolute;
+    top: 36px;
+    left: 60px;
+    right: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--coral), var(--gold));
+    opacity: 0.3;
+  }
+
+  .step {
+    flex: 1;
+    text-align: center;
+    padding: 0 16px;
+    position: relative;
+  }
+
+  .step-circle {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 18px;
+    position: relative;
+    z-index: 2;
+    border: 2px solid;
+  }
+
+  .step-1 .step-circle {
+    background: rgba(0,229,199,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: 0 0 30px var(--accent-glow);
+  }
+
+  .step-2 .step-circle {
+    background: rgba(255,107,90,0.1);
+    border-color: var(--coral);
+    color: var(--coral);
+    box-shadow: 0 0 30px var(--coral-glow);
+  }
+
+  .step-3 .step-circle {
+    background: rgba(255,200,87,0.1);
+    border-color: var(--gold);
+    color: var(--gold);
+    box-shadow: 0 0 30px rgba(255,200,87,0.2);
+  }
+
+  .step h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Drone army visual */
+  .army-visual {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 280px;
+    margin-top: 30px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(180deg, rgba(7,26,46,0.5), rgba(12,39,68,0.3));
+    border: 1px solid var(--border);
+  }
+
+  #army-canvas {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Location cards */
+  .location-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 850px;
+    width: 100%;
+    margin-top: 30px;
+  }
+
+  .location-card {
+    border-radius: 16px;
+    padding: 28px 22px;
+    text-align: center;
+    border: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    transition: all 0.4s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .location-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(0,229,199,0.3);
+  }
+
+  .loc-ocean { background: linear-gradient(135deg, rgba(0,100,180,0.2), rgba(0,229,199,0.05)); }
+  .loc-river { background: linear-gradient(135deg, rgba(0,150,136,0.2), rgba(0,229,199,0.05)); }
+  .loc-coast { background: linear-gradient(135deg, rgba(255,107,90,0.15), rgba(255,200,87,0.05)); }
+
+  .loc-icon {
+    font-size: 36px;
+    margin-bottom: 14px;
+    display: block;
+  }
+
+  .location-card h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .location-card p {
+    font-size: 13px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  /* Comparison layout */
+  .compare-layout {
+    display: flex;
+    gap: 40px;
+    max-width: 900px;
+    width: 100%;
+    margin-top: 30px;
+    align-items: stretch;
+  }
+
+  .compare-col {
+    flex: 1;
+    border-radius: 16px;
+    padding: 32px 28px;
+    border: 1px solid var(--border);
+  }
+
+  .compare-bad {
+    background: rgba(255,107,90,0.05);
+    border-color: rgba(255,107,90,0.2);
+  }
+
+  .compare-good {
+    background: rgba(0,229,199,0.05);
+    border-color: rgba(0,229,199,0.2);
+  }
+
+  .compare-col h4 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 18px;
+  }
+
+  .compare-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+    font-size: 15px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  .compare-item i {
+    margin-top: 3px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Timeline */
+  .timeline {
+    max-width: 700px;
+    width: 100%;
+    margin-top: 36px;
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(180deg, var(--accent), var(--coral), var(--gold));
+    opacity: 0.3;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 28px;
+    padding-left: 20px;
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -33px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--accent);
+    background: var(--bg-deep);
+  }
+
+  .timeline-item:nth-child(2) .timeline-dot { border-color: var(--coral); }
+  .timeline-item:nth-child(3) .timeline-dot { border-color: var(--gold); }
+
+  .timeline-year {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .timeline-item:nth-child(2) .timeline-year { color: var(--coral); }
+  .timeline-item:nth-child(3) .timeline-year { color: var(--gold); }
+
+  .timeline-text {
+    font-size: 16px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  /* Big quote */
+  .big-quote {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 200;
+    font-size: clamp(28px, 3.5vw, 48px);
+    line-height: 1.3;
+    text-align: center;
+    max-width: 800px;
+    margin-top: 30px;
+    color: var(--fg);
+  }
+
+  .big-quote .highlight { font-weight: 600; }
+
+  /* End slide CTA */
+  .cta-block {
+    text-align: center;
+    margin-top: 40px;
+  }
+
+  .cta-block p {
+    margin: 0 auto 30px;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 40px;
+    border-radius: 100px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.4s;
+    background: linear-gradient(135deg, var(--accent), #00b89c);
+    color: var(--bg-deep);
+    box-shadow: 0 8px 30px var(--accent-glow);
+  }
+
+  .cta-btn:hover {
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 12px 40px rgba(0,229,199,0.4);
+  }
+
+  .cta-btn:active { transform: scale(0.97); }
+
+  /* Feature list */
+  .feature-list {
+    list-style: none;
+    max-width: 600px;
+    margin-top: 24px;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+    font-size: 17px;
+    color: var(--fg-muted);
+    line-height: 1.5;
+  }
+
+  .feature-list li i {
+    color: var(--accent);
+    margin-top: 4px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  /* Floating decorative elements */
+  .float-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .slide { padding: 40px 30px; }
+    .process-steps { flex-direction: column; gap: 24px; }
+    .process-line { display: none; }
+    .compare-layout { flex-direction: column; }
+    .location-grid { grid-template-columns: 1fr; }
+    .stats-row { gap: 16px; }
+    .stat-block { min-width: 120px; padding: 16px 20px; }
+    .stat-number { font-size: 36px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .army-visual { height: 200px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .slide { transition: opacity 0.3s; transform: none !important; }
+    .slide.active { transform: none !important; }
+    .slide.exit-left { transform: none !important; }
+  }
+
+  /* Keyboard hint */
+  .key-hint {
+    position: fixed;
+    top: 28px;
+    left: 40px;
+    font-size: 12px;
+    color: rgba(127,184,204,0.4);
+    letter-spacing: 1px;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .key-hint kbd {
+    background: rgba(127,184,204,0.1);
+    border: 1px solid rgba(127,184,204,0.15);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 11px;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="ocean-bg"></canvas>
+
+<div class="progress-bar" id="progress"></div>
+
+<div class="key-hint">
+  <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate
+</div>
+
+<div class="presentation" id="presentation">
+
+  <!-- SLIDE 1: Title -->
+  <div class="slide active" data-slide="0">
+    <div class="float-blob" style="width:400px;height:400px;background:var(--accent);top:-100px;right:-100px;"></div>
+    <div class="float-blob" style="width:300px;height:300px;background:var(--coral);bottom:-80px;left:-80px;"></div>
+    <span class="slide-number">01 / 10</span>
+    <span class="tag tag-teal">Clean Tech Innovation</span>
+    <h1>Ocean Drones<br>That <span class="highlight">Eat Plastic</span></h1>
+    <p class="subtitle">A mini army of robots, patrolling our waters to clean what we broke.</p>
+    <p style="font-size:14px;opacity:0.5;">Press arrow keys or click to begin</p>
+  </div>
+
+  <!-- SLIDE 2: The Problem -->
+  <div class="slide" data-slide="1">
+    <span class="slide-number">02 / 10</span>
+    <span class="tag tag-coral">The Crisis</span>
+    <h2>Our Oceans Are <span class="coral">Choking</span></h2>
+    <p>Every minute, a garbage truck of plastic enters the ocean. By 2050, there may be more plastic than fish by weight.</p>
+    <div class="stats-row">
+      <div class="stat-block">
+        <div class="stat-number coral">11M</div>
+        <div class="stat-label">Tons per Year</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-number coral">5.25T</div>
+        <div class="stat-label">Particles Floating</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-number coral">700</div>
+        <div class="stat-label">Species Affected</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-number coral">450yr</div>
+        <div class="stat-label">To Decompose</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: The Solution -->
+  <div class="slide" data-slide="2">
+    <div class="float-blob" style="width:350px;height:350px;background:var(--accent);bottom:-100px;right:10%;"></div>
+    <span class="slide-number">03 / 10</span>
+    <span class="tag tag-teal">The Solution</span>
+    <h2>Meet the <span class="highlight">Mini Army</span></h2>
+    <p>Small, autonomous drones deployed in swarms across oceans and rivers. They think, swim, and eat plastic — then come home when full.</p>
+    <div class="cards-grid">
+      <div class="card">
+        <span class="card-icon"><i class="fas fa-water"></i></span>
+        <h4>Float & Patrol</h4>
+        <p>They drift with currents and actively scan surface waters for plastic debris.</p>
+      </div>
+      <div class="card">
+        <span class="card-icon" style="color:var(--coral)"><i class="fas fa-robot"></i></span>
+        <h4>Autonomous AI</h4>
+        <p>On-board computer vision distinguishes plastic from marine life with 95% accuracy.</p>
+      </div>
+      <div class="card">
+        <span class="card-icon" style="color:var(--gold)"><i class="fas fa-warehouse"></i></span>
+        <h4>Return to Base</h4>
+        <p>When full, drones navigate back autonomously to offload and recharge.</p>
+      </div>
+      <div class="card">
+        <span class="card-icon" style="color:#a78bfa"><i class="fas fa-satellite-dish"></i></span>
+        <h4>Swarm Coordination</h4>
+        <p>Drones communicate to avoid overlap and cover maximum area efficiently.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: How It Works -->
+  <div class="slide" data-slide="3">
+    <span class="slide-number">04 / 10</span>
+    <span class="tag tag-teal">How It Works</span>
+    <h2>Three Simple <span class="highlight">Steps</span></h2>
+    <p>From deployment to collection — a fully automated cycle that runs 24/7.</p>
+    <div class="process-steps">
+      <div class="process-line"></div>
+      <div class="step step-1">
+        <div class="step-circle"><i class="fas fa-ship"></i></div>
+        <h4>Deploy & Float</h4>
+        <p>Released from a base station into oceans, rivers, or coastal zones. Solar-powered, no fuel needed.</p>
+      </div>
+      <div class="step step-2">
+        <div class="step-circle"><i class="fas fa-arrows-to-circle"></i></div>
+        <h4>Collect Plastic</h4>
+        <p>Conveyor belts pull in debris. AI filters out fish and organic matter. Holds up to 20kg per trip.</p>
+      </div>
+      <div class="step step-3">
+        <div class="step-circle"><i class="fas fa-rotate-left"></i></div>
+        <h4>Return & Repeat</h4>
+        <p>GPS-guided return to dock. Auto-offload, recharge, and redeploy. Continuous loop, zero human labor.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: Army in Action (Visual) -->
+  <div class="slide" data-slide="4">
+    <span class="slide-number">05 / 10</span>
+    <span class="tag tag-teal">Visualization</span>
+    <h2>The Swarm <span class="highlight">in Action</span></h2>
+    <p>Watch how dozens of drones spread across water, detect debris, and coordinate cleanup.</p>
+    <div class="army-visual">
+      <canvas id="army-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- SLIDE 6: Key Features -->
+  <div class="slide" data-slide="5">
+    <span class="slide-number">06 / 10</span>
+    <span class="tag tag-teal">Features</span>
+    <h2>Built to <span class="highlight">Survive</span> the Ocean</h2>
+    <p>These aren't lab prototypes. They're engineered for the harshest environment on Earth.</p>
+    <ul class="feature-list">
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">Solar-powered hull</strong> — unlimited runtime, zero emissions, operates through day and night with battery reserves</span></li>
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">AI computer vision</strong> — real-time object detection that tells plastic from turtles, jellyfish, and seaweed</span></li>
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">Storm-resistant design</strong> — self-righting hull survives waves up to 3 meters, auto-parks in severe weather</span></li>
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">Modular conveyor system</strong> — interchangeable filters for microplastics, bottles, or fishing nets</span></li>
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">Satellite connectivity</strong> — tracked and monitored from anywhere in the world via a central dashboard</span></li>
+      <li><i class="fas fa-check-circle"></i> <span><strong style="color:var(--fg)">Recyclable build</strong> — drones themselves are made from recycled ocean plastic, closing the loop</span></li>
+    </ul>
+  </div>
+
+  <!-- SLIDE 7: Where They Deploy -->
+  <div class="slide" data-slide="6">
+    <span class="slide-number">07 / 10</span>
+    <span class="tag tag-teal">Deployment</span>
+    <h2>Where the <span class="highlight">Army</span> Goes</h2>
+    <p>Different terrains, different drone configurations. One mission: clean every waterway.</p>
+    <div class="location-grid">
+      <div class="location-card loc-ocean">
+        <span class="loc-icon"><i class="fas fa-water" style="color:var(--accent)"></i></span>
+        <h4>Open Ocean</h4>
+        <p>Large swarms targeting the Great Pacific Garbage Patch and other gyres. Long-range, heavy-capacity units.</p>
+      </div>
+      <div class="location-card loc-river">
+        <span class="loc-icon"><i class="fas fa-faucet-drip" style="color:var(--accent)"></i></span>
+        <h4>Rivers & Delta</h4>
+        <p>Intercepting plastic before it reaches the ocean. 80% of ocean plastic comes from just 1,000 rivers.</p>
+      </div>
+      <div class="location-card loc-coast">
+        <span class="loc-icon"><i class="fas fa-umbrella-beach" style="color:var(--coral)"></i></span>
+        <h4>Coastal Zones</h4>
+        <p>Cleaning tourist beaches and coastal waters where plastic concentration is highest and most visible.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 8: Comparison -->
+  <div class="slide" data-slide="7">
+    <span class="slide-number">08 / 10</span>
+    <span class="tag tag-coral">Why Drones</span>
+    <h2>Drones vs. <span class="coral">Traditional</span> Methods</h2>
+    <p>Why a swarm of small robots beats boats, nets, and human cleanup crews.</p>
+    <div class="compare-layout">
+      <div class="compare-col compare-bad">
+        <h4 class="coral"><i class="fas fa-xmark"></i> Traditional Cleanup</h4>
+        <div class="compare-item"><i class="fas fa-circle-xmark coral"></i> Large boats burn fossil fuels, adding to the problem</div>
+        <div class="compare-item"><i class="fas fa-circle-xmark coral"></i> Human crews limited to daylight hours</div>
+        <div class="compare-item"><i class="fas fa-circle-xmark coral"></i> Nets catch marine life by mistake</div>
+        <div class="compare-item"><i class="fas fa-circle-xmark coral"></i> Cannot reach shallow or remote areas</div>
+        <div class="compare-item"><i class="fas fa-circle-xmark coral"></i> Costs millions per square km cleaned</div>
+      </div>
+      <div class="compare-col compare-good">
+        <h4 class="highlight"><i class="fas fa-check"></i> Drone Swarm</h4>
+        <div class="compare-item"><i class="fas fa-circle-check highlight"></i> 100% solar-powered, zero carbon footprint</div>
+        <div class="compare-item"><i class="fas fa-circle-check highlight"></i> 24/7 autonomous operation, no breaks needed</div>
+        <div class="compare-item"><i class="fas fa-circle-check highlight"></i> AI vision protects fish and wildlife</div>
+        <div class="compare-item"><i class="fas fa-circle-check highlight"></i> Small enough for rivers, deltas, coastlines</div>
+        <div class="compare-item"><i class="fas fa-circle-check highlight"></i> Scales to thousands of units at low cost</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 9: Impact & Timeline -->
+  <div class="slide" data-slide="8">
+    <div class="float-blob" style="width:300px;height:300px;background:var(--gold);top:-80px;left:-60px;"></div>
+    <span class="slide-number">09 / 10</span>
+    <span class="tag tag-teal">Roadmap</span>
+    <h2>The Path to <span class="gold">Clean Oceans</span></h2>
+    <p>Scaling from prototype to global fleet — a realistic timeline to measurable impact.</p>
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">Phase 1 — 2025</div>
+        <div class="timeline-text">100 drones deployed across 5 river systems in Southeast Asia. Intercepting plastic at source. Target: remove 500 tons/year.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">Phase 2 — 2027</div>
+        <div class="timeline-text">1,000 drones covering coastal zones in 20 countries. First ocean gyre deployment begins. Real-time global tracking dashboard live.</div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-year">Phase 3 — 2030</div>
+        <div class="timeline-text">10,000+ drone fleet operating globally. Full-time presence in all 5 major ocean garbage patches. Projected: 100,000 tons removed annually.</div>
+      </div>
+    </div>
+    <div class="stats-row" style="margin-top:24px;">
+      <div class="stat-block">
+        <div class="stat-number gold">100K</div>
+        <div class="stat-label">Tons / Year by 2030</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-number highlight">10K+</div>
+        <div class="stat-label">Active Drones</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-number" style="color:#a78bfa">50+</div>
+        <div class="stat-label">Countries</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 10: Closing -->
+  <div class="slide" data-slide="9">
+    <div class="float-blob" style="width:500px;height:500px;background:var(--accent);top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+    <span class="slide-number">10 / 10</span>
+    <div class="big-quote">
+      We broke the ocean.<br><span class="highlight">Now let robots fix it.</span>
+    </div>
+    <div class="cta-block">
+      <p>The technology exists. The will must follow. Every drone deployed is a piece of plastic that never reaches a turtle's stomach.</p>
+      <button class="cta-btn" onclick="goToSlide(0)">
+        <i class="fas fa-rotate-left"></i> Restart Presentation
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Navigation -->
+<div class="slide-dots" id="dots"></div>
+<div class="nav-controls">
+  <button class="nav-btn" id="prevBtn" aria-label="Previous slide"><i class="fas fa-chevron-left"></i></button>
+  <button class="nav-btn" id="nextBtn" aria-label="Next slide"><i class="fas fa-chevron-right"></i></button>
+</div>
+
+<script>
+// === Slide Navigation ===
+const slides = document.querySelectorAll('.slide');
+const totalSlides = slides.length;
+let currentSlide = 0;
+let isTransitioning = false;
+
+// Create dots
+const dotsContainer = document.getElementById('dots');
+for (let i = 0; i < totalSlides; i++) {
+  const dot = document.createElement('div');
+  dot.className = 'dot' + (i === 0 ? ' active' : '');
+  dot.addEventListener('click', () => goToSlide(i));
+  dotsContainer.appendChild(dot);
+}
+
+function goToSlide(index) {
+  if (isTransitioning || index === currentSlide || index < 0 || index >= totalSlides) return;
+  isTransitioning = true;
+
+  const direction = index > currentSlide ? 1 : -1;
+  const oldSlide = slides[currentSlide];
+  const newSlide = slides[index];
+
+  // Exit old slide
+  oldSlide.classList.remove('active');
+  oldSlide.classList.add(direction > 0 ? 'exit-left' : '');
+  oldSlide.style.transform = direction > 0
+    ? 'translateX(-80px) scale(0.96)'
+    : 'translateX(80px) scale(0.96)';
+  oldSlide.style.opacity = '0';
+
+  // Enter new slide
+  newSlide.style.transform = direction > 0
+    ? 'translateX(80px) scale(0.96)'
+    : 'translateX(-80px) scale(0.96)';
+  newSlide.style.opacity = '0';
+
+  requestAnimationFrame(() => {
+    newSlide.classList.add('active');
+    newSlide.style.transform = '';
+    newSlide.style.opacity = '';
+  });
+
+  currentSlide = index;
+  updateUI();
+
+  setTimeout(() => {
+    oldSlide.classList.remove('exit-left');
+    oldSlide.style.transform = '';
+    oldSlide.style.opacity = '';
+    isTransitioning = false;
+  }, 750);
+}
+
+function updateUI() {
+  // Update dots
+  document.querySelectorAll('.dot').forEach((d, i) => {
+    d.classList.toggle('active', i === currentSlide);
+  });
+  // Update progress bar
+  document.getElementById('progress').style.width =
+    ((currentSlide + 1) / totalSlides * 100) + '%';
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    e.preventDefault();
+    goToSlide(currentSlide + 1);
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    goToSlide(currentSlide - 1);
+  }
+});
+
+// Button navigation
+document.getElementById('nextBtn').addEventListener('click', () => goToSlide(currentSlide + 1));
+document.getElementById('prevBtn').addEventListener('click', () => goToSlide(currentSlide - 1));
+
+// Touch swipe
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 60) {
+    goToSlide(diff > 0 ? currentSlide + 1 : currentSlide - 1);
+  }
+});
+
+// Initialize progress
+updateUI();
+
+// === Background Ocean Particles ===
+(function initOceanBG() {
+  const canvas = document.getElementById('ocean-bg');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  const particles = [];
+  const PARTICLE_COUNT = 80;
+
+  function resize() {
+    w = canvas.width = window.innerWidth;
+    h = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Create particles
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 2 + 0.5,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: -Math.random() * 0.4 - 0.1,
+      alpha: Math.random() * 0.3 + 0.05,
+      hue: Math.random() > 0.7 ? 170 : 190
+    });
+  }
+
+  function drawBG() {
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle gradient overlay
+    const grad = ctx.createRadialGradient(w * 0.5, h * 0.6, 0, w * 0.5, h * 0.6, Math.max(w, h) * 0.7);
+    grad.addColorStop(0, 'rgba(0,40,60,0.15)');
+    grad.addColorStop(1, 'rgba(4,13,26,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw particles
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.y < -10) { p.y = h + 10; p.x = Math.random() * w; }
+      if (p.x < -10) p.x = w + 10;
+      if (p.x > w + 10) p.x = -10;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.5, p.r), 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 80%, 65%, ${p.alpha})`;
+      ctx.fill();
+    }
+
+    requestAnimationFrame(drawBG);
+  }
+  drawBG();
+})();
+
+// === Army Visualization Canvas ===
+(function initArmyCanvas() {
+  const canvas = document.getElementById('army-canvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+
+  function resize() {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    w = canvas.width = rect.width * window.devicePixelRatio;
+    h = canvas.height = rect.height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+  resize();
+  window.addEventListener('resize', () => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    resize();
+  });
+
+  const displayW = () => w / window.devicePixelRatio;
+  const displayH = () => h / window.devicePixelRatio;
+
+  // Drones
+  const drones = [];
+  const DRONE_COUNT = 18;
+  for (let i = 0; i < DRONE_COUNT; i++) {
+    drones.push({
+      x: Math.random() * 800,
+      y: Math.random() * 280,
+      tx: Math.random() * 800,
+      ty: Math.random() * 280,
+      speed: 0.3 + Math.random() * 0.5,
+      size: 6 + Math.random() * 4,
+      full: false,
+      fullness: Math.random(),
+      angle: 0
+    });
+  }
+
+  // Plastic particles
+  const plastics = [];
+  const PLASTIC_COUNT = 40;
+  for (let i = 0; i < PLASTIC_COUNT; i++) {
+    plastics.push({
+      x: Math.random() * 800,
+      y: 40 + Math.random() * 200,
+      size: 2 + Math.random() * 4,
+      alpha: 0.4 + Math.random() * 0.4,
+      collected: false,
+      type: Math.random() > 0.5 ? 'bottle' : 'fragment'
+    });
+  }
+
+  // Base station
+  const base = { x: 60, y: 140, w: 50, h: 40 };
+
+  let time = 0;
+
+  function drawArmy() {
+    const dw = displayW();
+    const dh = displayH();
+    ctx.clearRect(0, 0, dw, dh);
+
+    time += 0.016;
+
+    // Water background with waves
+    const waterGrad = ctx.createLinearGradient(0, 0, 0, dh);
+    waterGrad.addColorStop(0, 'rgba(0,60,80,0.3)');
+    waterGrad.addColorStop(1, 'rgba(0,30,50,0.5)');
+    ctx.fillStyle = waterGrad;
+    ctx.fillRect(0, 0, dw, dh);
+
+    // Wave lines
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(0,229,199,${0.03 + i * 0.01})`;
+      ctx.lineWidth = 1;
+      for (let x = 0; x < dw; x += 4) {
+        const y = 30 + i * 50 + Math.sin(x * 0.01 + time * 0.5 + i) * 8;
+        x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Draw base station
+    ctx.fillStyle = 'rgba(0,229,199,0.15)';
+    ctx.strokeStyle = 'rgba(0,229,199,0.5)';
+    ctx.lineWidth = 1.5;
+    const bx = dw * 0.06;
+    const by = dh * 0.45;
+    const bw = 44;
+    const bh = 32;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Base icon
+    ctx.fillStyle = 'rgba(0,229,199,0.8)';
+    ctx.font = '14px "Font Awesome 6 Free"';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('\uf015', bx + bw / 2, by + bh / 2);
+
+    // Base label
+    ctx.fillStyle = 'rgba(0,229,199,0.6)';
+    ctx.font = '10px "Space Grotesk", sans-serif';
+    ctx.fillText('BASE', bx + bw / 2, by - 10);
+
+    // Draw plastic
+    for (const p of plastics) {
+      if (p.collected) continue;
+      const px = (p.x / 800) * dw;
+      const py = p.y / 280 * dh;
+
+      // Bobbing
+      const bobY = py + Math.sin(time * 1.5 + p.x * 0.05) * 2;
+
+      ctx.fillStyle = `rgba(255,107,90,${p.alpha})`;
+      if (p.type === 'bottle') {
+        ctx.beginPath();
+        ctx.roundRect(px - p.size * 0.6, bobY - p.size, p.size * 1.2, p.size * 2, 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(px, bobY, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Update and draw drones
+    for (const d of drones) {
+      // Move toward target
+      const dx = d.tx - d.x;
+      const dy = d.ty - d.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 10) {
+        // Pick new target
+        if (d.fullness > 0.8) {
+          // Return to base
+          d.tx = 80;
+          d.ty = 140;
+        } else {
+          d.tx = 100 + Math.random() * 650;
+          d.ty = 30 + Math.random() * 200;
+        }
+      } else {
+        d.angle = Math.atan2(dy, dx);
+        d.x += Math.cos(d.angle) * d.speed;
+        d.y += Math.sin(d.angle) * d.speed;
+      }
+
+      // Check if near base and full
+      const toBaseDist = Math.sqrt((d.x - 80) ** 2 + (d.y - 140) ** 2);
+      if (toBaseDist < 30 && d.fullness > 0.8) {
+        d.fullness = 0;
+        d.full = false;
+        d.tx = 100 + Math.random() * 650;
+        d.ty = 30 + Math.random() * 200;
+      }
+
+      // Collect plastic
+      for (const p of plastics) {
+        if (p.collected) continue;
+        const pd = Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2);
+        if (pd < 20 && d.fullness < 1) {
+          p.collected = true;
+          d.fullness = Math.min(1, d.fullness + 0.15);
+          if (d.fullness > 0.8) d.full = true;
+        }
+      }
+
+      // Respawn collected plastic occasionally
+      if (plastics.filter(p => !p.collected).length < 20 && Math.random() < 0.02) {
+        const dead = plastics.find(p => p.collected);
+        if (dead) {
+          dead.collected = false;
+          dead.x = 200 + Math.random() * 550;
+          dead.y = 40 + Math.random() * 200;
+        }
+      }
+
+      // Draw drone
+      const sx = (d.x / 800) * dw;
+      const sy = (d.y / 280) * dh;
+      const s = d.size * (dw / 800);
+
+      // Glow
+      const glowColor = d.full ? 'rgba(255,107,90,0.3)' : 'rgba(0,229,199,0.25)';
+      const bodyColor = d.full ? '#ff6b5a' : '#00e5c7';
+      ctx.shadowColor = bodyColor;
+      ctx.shadowBlur = 12;
+
+      // Body
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.arc(sx, sy, s, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner
+      ctx.fillStyle = d.full ? 'rgba(255,107,90,0.5)' : 'rgba(0,229,199,0.4)';
+      ctx.beginPath();
+      ctx.arc(sx, sy, s * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Direction indicator
+      ctx.strokeStyle = bodyColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + Math.cos(d.angle) * s * 2, sy + Math.sin(d.angle) * s * 2);
+      ctx.stroke();
+
+      ctx.shadowBlur = 0;
+
+      // Fullness indicator ring
+      if (d.fullness > 0) {
+        ctx.strokeStyle = d.full ? 'rgba(255,107,90,0.6)' : 'rgba(0,229,199,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(sx, sy, s + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * d.fullness);
+        ctx.stroke();
+      }
+    }
+
+    // Legend
+    ctx.fillStyle = 'rgba(0,229,199,0.6)';
+    ctx.font = '10px "Space Grotesk", sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText('Teal = Seeking plastic', dw - 16, dh - 28);
+    ctx.fillStyle = 'rgba(255,107,90,0.6)';
+    ctx.fillText('Coral = Full, returning to base', dw - 16, dh - 14);
+
+    requestAnimationFrame(drawArmy);
+  }
+  drawArmy();
+})();
+</script>
+
+</body>
+</html>
